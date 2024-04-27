@@ -1,3 +1,4 @@
+const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const express = require('express');
 const cors = require('cors');
@@ -10,14 +11,15 @@ mongoose.connect('mongodb+srv://praveenuk176:1706@cluster0.ttfdxdr.mongodb.net/?
         console.log('Connected to my database');
     })
     .catch((err) => {
-        console.error(err);
+        console.error(err); 
     });
 
 // 2) schema -> database mongoose.Schema() -> object       json(bson)  key:value pair
 const userSchema = mongoose.Schema({
     name: { type: String },
     age: { type: Number },
-    course: { type: String }
+    course: { type: String },
+    mobile: { type: String }
 });
 
 // 3) collections -> model (collection creation, data setting)
@@ -30,10 +32,11 @@ app.use(cors()); // enable CORS
 // 5) writing post method
 app.post("/posting", async (req, resp) => {
     try {
-        const createUser = new Collections(req.body); // details like name, age
-        const result = await createUser.save();
-        const success = result.toObject();
-        resp.send(success);
+        const createUser=new Users(req.body);   //anu@gmail.com, anu
+        const result=await createUser.save();   // await->waiting purpose  (async->await    )  (await->async)
+        const success=result.toObject();       //object->response->object
+        console.log(success);
+        res.send(success);
     } catch (error) {
         console.log("post error method", error);
         resp.status(500).send("Error posting user data");
@@ -53,8 +56,8 @@ app.get("/posting", async (req, resp) => {
 app.put('/posting/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, age, course } = req.body;
-        const updatedUser = await Collections.findByIdAndUpdate(id, { name, age, course }, { new: true });
+        const { name, age, course, mobile } = req.body;
+        const updatedUser = await Collections.findByIdAndUpdate(id, { name, age, course, mobile }, { new: true });
         res.json(updatedUser);
     } catch (error) {
         console.error(error);
@@ -73,28 +76,42 @@ app.delete('/posting/:id', async (req, res) => {
     }
 });
 
-app.post("/", cors(), async (req, res) => {
+
+const usersSchema = mongoose.Schema({
+    email: {type: String},
+    password: {type: String}
+});
+
+// 3) collections -> model (collection creation, data setting)
+const Collection = mongoose.model("logindetails", usersSchema);
+
+
+app.post("/login", async (req, res) => {
     const { email, password } = req.body;
+
     try {
-        const check = await Collections.findOne({ email: email });
-        if (check) {
-            res.json("exist");
-        } else {
-            res.json("not exist");
-        }
-    } catch (e) {
-        res.json("not exist");
+        // Query the database for the user with the provided email
+        const user = await Collection.findOne({ email });
+
+        // Compare the provided password with the hashed password in the database
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        // If everything is valid, return success
+        res.json({ message: "Login successful." });
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ message: "Something went wrong. Please try again later." });
     }
 });
 
 app.post("/signup", cors(), async (req, res) => {
     const { email, password } = req.body;
     try {
-        const check = await Collections.findOne({ email: email });
+        const check = await Collection.findOne({ email: email });
         if (check) {
             res.json("exist");
         } else {
-            await Collections.create({ email: email, password: password });
+            await Collection.create({ email: email, password: password });
             res.json("not exist");
         }
     } catch (e) {
